@@ -23,8 +23,7 @@ import java.net.http.HttpResponse;
 
 @RunWith(VertxUnitRunner.class)
 public class UploadTest {
-    @Test
-    public void test(TestContext context) throws IOException, URISyntaxException, InterruptedException {
+    public void test(TestContext context, String data) throws IOException, URISyntaxException, InterruptedException {
         final var vertx = Vertx.vertx();
         final var logger = LoggerFactory.getLogger(getClass());
 
@@ -77,8 +76,6 @@ public class UploadTest {
 
             final var client = HttpClient.newBuilder().build();
 
-            // some form field large enough to hit Vert.x limit
-            final var data = "x".repeat(16 * 1024);
             final HttpRequest upload =
                     HttpRequest.newBuilder()
                             .uri(new URI("http://localhost:" + s.getLocalPort()))
@@ -94,13 +91,34 @@ public class UploadTest {
                             .build();
             final var uploadResponse = client.send(upload, HttpResponse.BodyHandlers.ofString());
 
-            // FAILED
-            // there is a bunch of java.io.IOException: Size exceed allowed maximum capacity
-            // caused by oversized form field
             Assert.assertEquals(200, uploadResponse.statusCode());
         } finally {
             logger.info("closing vertx");
             vertx.close();
+        }
+    }
+
+    @Test
+    public void testSuccess(TestContext context) throws IOException, URISyntaxException, InterruptedException {
+        // Vert.x 3.9.5 accepts this, accumulating chunks of POST payload into memory
+        final var data = "x".repeat(16 * 1024);
+        test(context, data);
+    }
+
+    @Test
+    public void testOOM(TestContext context) throws IOException, URISyntaxException, InterruptedException {
+        // However, we will (likely) hit OOM here
+        // See JVM heap limits in build.gradle.kts
+        //
+        // this potential vulnerability (potential on attacj on server running Vert.x) has been fixed in 3.9.6
+        // which throws expections internally from the part of code which accumulates field content
+        // to String
+        final var data = "x".repeat(16 * 1024 * 1024);
+        try {
+            test(context, data);
+            Assert.fail("expected OOM");
+        } catch (OutOfMemoryError e) {
+            LoggerFactory.getLogger(getClass()).info("OOM as expected", e);
         }
     }
 }

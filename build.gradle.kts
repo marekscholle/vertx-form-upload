@@ -12,8 +12,13 @@ java {
 }
 
 dependencies {
-    implementation("io.vertx:vertx-web:4.3.4")
-    implementation("io.vertx:vertx-unit:4.3.4")
+    implementation("io.vertx:vertx-web:3.9.5")
+    implementation("io.vertx:vertx-unit:3.9.5")
     implementation("ch.qos.logback:logback-classic:1.4.4")
     testImplementation("junit:junit:4.13.2")
+}
+
+tasks.withType<Test> {
+    minHeapSize = "32m"
+    maxHeapSize = "64m"
 }
