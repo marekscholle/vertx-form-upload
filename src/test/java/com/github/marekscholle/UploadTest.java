@@ -44,7 +44,7 @@ public class UploadTest {
             ctx.response().setStatusCode(200);
             ctx.request().uploadHandler(upload -> {
                 logger.info("upload handler {}", upload.name());
-                upload.handler(buf -> logger.info("upload handler handler {}", upload.name()));
+                upload.handler(buf -> logger.info("upload handler {} handler: {}", upload.name(), buf));
             });
             ctx.request().endHandler(v -> {
                 logger.info("end handler: form attributes=\n{}", ctx.request().formAttributes());
@@ -86,6 +86,8 @@ public class UploadTest {
                             .header("Content-Type", "multipart/form-data; boundary=\"boundary\"")
                             .POST(HttpRequest.BodyPublishers.ofString(
                                     "--boundary\n"
+                                            // you may try this to see how file uploads are handled in streaming fashion
+                                            //+ "Content-Disposition: form-data; name=\"file\"; filename=\"file.txt\"\n"
                                             + "Content-Disposition: form-data; name=\"key\"\n"
                                             + "\n"
                                             + data
